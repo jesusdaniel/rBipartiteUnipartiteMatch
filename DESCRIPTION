@@ -1,0 +1,21 @@
+Package: rBipartiteUnipartiteMatch
+Title: Graph Matching between Bipartite and Unipartite Networks
+Version: 0.0.0.9000
+Authors@R: 
+    c(person(given = "Jesús",
+           family = "Arroyo",
+           role = c("aut", "cre"),
+           email = "jarroyor@umich.edu"),
+       person("Carey", "Priebe", role = "ctb"),
+       person("Vince", "Lyzinski", role = "ctb"))
+Imports:
+    iGraphMatch,
+    glasso,
+    huge,
+    glmnet
+Description: Graph matching methods for bipartite and unipartite graphs.
+License: GPL (>= 2)
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.1.0
