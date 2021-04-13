@@ -1,6 +1,6 @@
 # rBipartiteUnipartiteMatch
 
-This package contains methods for performing graph matching between bipartite and unipartite networks
+This repository contains methods for performing graph matching between bipartite and unipartite networks
 
 ## Installation
 To install the package, use the following script:
@@ -11,6 +11,7 @@ devtools::install_github("jesusdaniel/rBipartiteUnipartiteMatch")
 ```
 
 ## Usage
+Please check [this](https://raw.githubusercontent.com/jesusdaniel/rBipartiteUnipartiteMatch/main/Erdos-Renyi%20experiment.R) script to see some examples of the methods in action.
 
 ## References
 
