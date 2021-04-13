@@ -13,15 +13,14 @@ bipartite_matching_pseudolikelihood(
   MAX_ITER = 20,
   verbose = FALSE,
   seeds = NULL,
-  gamma = 0,
-  similarity = FALSE
+  gamma = 0
 )
 }
 \arguments{
 \item{A}{Adjacency matrix of the unipartite graph.}
 
 \item{B}{Bipartite graph incidence matrix, where rows correspond to the vertices in common
-with the unipartite graph.}
+with the unipartite graph. Entries of B need to be binary in {0, 1}.}
 
 \item{Q_true}{A permutation matrix with the true solution, if known. When the true solution is unknown, the default is NULL.}
 
@@ -36,8 +35,6 @@ vertices can be passed through this parameter, and the corresponding rows of A a
 The algorithm will then match the remaining vertices. The default is NULL if no seeds are available.}
 
 \item{gamma}{Additional penalty for all variables. A positive small constant is needed when the sample size}
-
-\item{similarity}{Whether to use a similarity matrix in graph matching (experimental parameter).}
 }
 \value{
 

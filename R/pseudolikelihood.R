@@ -4,10 +4,10 @@ penalized_pseudolikelihood <- function(B, family = "binomial", lambda, W, gamma 
   Theta_pseudo = Matrix(0, n, n)
   beta_pseudo = rep(0, n)
   for(k in 1:n) {
-    fit_k <- glmnet(x = t(B[-k,]), y = B[k,], family = family, #lambda = lambda,
+    fit_k <- glmnet::glmnet(x = t(B[-k,]), y = B[k,], family = family, #lambda = lambda,
                     penalty.factor = W[k,-k] + mean(W[k,-k])*gamma)
     # constant gamma added for numerical stability
-    coefs =  predict(fit_k, s = lambda, type = "coefficients")
+    coefs =  glmnet::predict.glmnet(fit_k, s = lambda, type = "coefficients")
     Theta_pseudo[k, -k]= coefs[-1]
     beta_pseudo[k] = coefs[1]
   }

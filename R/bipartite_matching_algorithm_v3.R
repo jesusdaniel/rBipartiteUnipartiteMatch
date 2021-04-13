@@ -18,7 +18,6 @@
 #' @param seeds If some vertices have known correspondence, a vector containing the indexes of these
 #' vertices can be passed through this parameter, and the corresponding rows of A and B are assumed to be aligned.
 #' The algorithm will then match the remaining vertices. The default is NULL if no seeds are available.
-#' @param similarity Whether to use a similarity (experimental parameter).
 #' @return
 #' @export
 bipartite_matching_icov <- function(A, B,
@@ -27,9 +26,7 @@ bipartite_matching_icov <- function(A, B,
                                MAX_ITER = 30,
                                verbose = FALSE,
                                covariance = TRUE,
-                               seeds = NULL,
-                               similarity = FALSE) {
-
+                               seeds = NULL) {
   # algorithm parameters
   TOL <- 1e-4
   l_factor <- 1
@@ -38,17 +35,9 @@ bipartite_matching_icov <- function(A, B,
   m <- ncol(B)
 
   if(covariance) {
-    S <- cov(t(B))
+    S <- cov(Matrix::t(B))
   }else {
-    S <- cor(t(B))
-  }
-
-  if(similarity) {
-    embedA <- ase(A)
-    dimembed <- ncol(embedA)
-    simMatrix <- matrix(0, n, n)
-  } else {
-    simMatrix <- NULL
+    S <- cor(Matrix::t(B))
   }
 
   # check if zero rows in B
@@ -61,17 +50,17 @@ bipartite_matching_icov <- function(A, B,
 
   # report baseline loglikelihood if true solution is known
   if(!is.null(Q_true)) {
-    Q_1 <- as.matrix(1 - t(Q_true) %*% A %*% Q_true)
+    Q_1 <- as.matrix(1 - Matrix::t(Q_true) %*% A %*% Q_true)
     diag(Q_1) <- 0
-    Theta_hat <- suppressWarnings(glasso(S, rho=0, zero = which(Q_1==1, arr.ind = T)))
+    Theta_hat <- suppressWarnings(glasso::glasso(S, rho=0, zero = which(Q_1==1, arr.ind = T)))
     if(is.nan(max(Theta_hat$wi))) {
-      Theta_hat <- suppressWarnings(glasso(S, rho=1e-6, zero = which(Q_1==1, arr.ind = T)))
+      Theta_hat <- suppressWarnings(glasso::glasso(S, rho=1e-6, zero = which(Q_1==1, arr.ind = T)))
       if(verbose)
-        cat("---Baseline penalized loglikelihood (rho=1e-6):",
-            log(det(Theta_hat$wi)) - sum(S*Theta_hat$wi), "\n")
+        cat(sprintf("---Baseline penalized loglikelihood (rho=1e-6): %.4f\n",
+            log(det(Theta_hat$wi)) - sum(S*Theta_hat$wi)))
     } else {
       if(verbose)
-        cat("---Baseline loglikelihood:", log(det(Theta_hat$wi)) - sum(S*Theta_hat$wi), "\n")
+        cat(sprintf("---Baseline loglikelihood: %.4f\n", log(det(Theta_hat$wi)) - sum(S*Theta_hat$wi)))
     }
   }
 
@@ -91,26 +80,26 @@ bipartite_matching_icov <- function(A, B,
     while(iter <= MAX_ITER & crit > TOL) {
       iter <- iter + 1
       # make penalty matrix
-      P <- t(D) %*% A %*% (D)
+      P <- Matrix::t(D) %*% A %*% (D)
       diag(P) <- 1
       P <- 1- P
-      P <- as.matrix((P + t(P))/2) # make sure it is symmetric
+      P <- as.matrix((P + Matrix::t(P))/2) # make sure it is symmetric
 
       # run graphical lasso =================================
       if(zerorowsB) { # delete zero rows of B if they exist
-        GLsub <- glasso(S[-whichzerorowsB, -whichzerorowsB],
+        GLsub <- glasso::glasso(S[-whichzerorowsB, -whichzerorowsB],
                        rho = lambda*(P[-whichzerorowsB, -whichzerorowsB]))
         # penalize all entries if solution is not found
         if(is.nan(sum(GLsub$wi[-whichzerorowsB, -whichzerorowsB])))
-          GLsub <- glasso(S[-whichzerorowsB, -whichzerorowsB],
+          GLsub <- glasso::glasso(S[-whichzerorowsB, -whichzerorowsB],
                          rho = lambda*(P[-whichzerorowsB, -whichzerorowsB]) + lambda/10)
         # absolute inverse covariance
         U <- matrix(0, n, n)
         U[-whichzerorowsB, -whichzerorowsB] <- abs(GLsub$wi)
       } else{ # B has no zero rows
-        GL <- glasso(S, rho = lambda*(P))
+        GL <- glasso::glasso(S, rho = lambda*(P))
         if(is.nan(sum(GL$wi)))
-          GL <- glasso(S, rho = lambda*(P) + lambda/10)
+          GL <- glasso::glasso(S, rho = lambda*(P) + lambda/10)
         # inverse covariance
         U <- abs(GL$wi)
       }
@@ -121,22 +110,17 @@ bipartite_matching_icov <- function(A, B,
       sparse  <-  sum(U!=0)/(n^2-n) # calculate %off-diagonal nonzeros
 
       # run graph matching ====================================
-      if(similarity) {
-        embedB <- ase(U + t(U), dimembed) / sqrt(2)
-        simMatrix <- tcrossprod(embedA, embedB)
-      }
       GM <- iGraphMatch::graph_match_FW(A = A, B = U,
-                                       similarity = simMatrix,
                                        start = "bari", seeds = seeds)
       # graph matching solution
       D <- as.matrix(GM$D)
       # compute objective function value
       Q <- GM$P
-      Q_1 <- as.matrix(1 - t(Q) %*% A %*% (Q))
+      Q_1 <- as.matrix(1 - Matrix::t(Q) %*% A %*% (Q))
       diag(Q_1) <- 0
-      Theta_hat <- suppressWarnings(glasso(S, rho=0, zero = which(Q_1==1, arr.ind = T)))
+      Theta_hat <- suppressWarnings(glasso::glasso(S, rho=0, zero = which(Q_1==1, arr.ind = T)))
       if(is.nan(max(Theta_hat$wi)))
-        Theta_hat <- suppressWarnings(glasso(S, rho=1e-6, zero = which(Q_1==1, arr.ind = T)))
+        Theta_hat <- suppressWarnings(glasso::glasso(S, rho=1e-6, zero = which(Q_1==1, arr.ind = T)))
       if(zerorowsB){
         f_t <- log(det(Theta_hat$wi[-whichzerorowsB, -whichzerorowsB])) -
           sum((S*Theta_hat$wi)[-whichzerorowsB,-whichzerorowsB])
@@ -153,16 +137,15 @@ bipartite_matching_icov <- function(A, B,
       # Print iteration results (% nonzeros, % incorrect matched vertices)
       if(verbose == TRUE) {
         if(is.null(Q_true)) {
-          cat(c("---", iter, "\t", "loglik_t=", f_t, "\t %nonzeros=", sparse,
-                "\n"))
+          cat(sprintf(c("--- %d\tloglik_t=%.4f\t%%nonzeros=%.4f\n", iter, f_t, sparse)))
         } else{
           if(is.null(seeds)) {
-            cat(c("---", iter, "\t", "loglik_t=", f_t, "\t %nonzeros=", sparse,
-                  "Match.%error=",sum(abs(Q_true - D))/(2*(n)), "\n" ))
+            cat(sprintf("---%d\tloglik_t= %0.4f\t%%nonzeros= %0.4f\tMatch.%%error= %0.4f\n",
+                        iter, f_t, sparse,100*sum(abs(Q_true - D))/(2*(n)), "\n" ))
           } else{
-            cat(c("---", iter, "\t", "loglik_t=", f_t, "\t %nonzeros=", sparse,
-                  "Match.%error=",
-                  sum(abs(Q_true[-seeds, -seeds] - D[-seeds, -seeds]))/(2*(n-length(seeds))), "\n" ))
+            cat(sprintf("---%d\tloglik_t= %0.4f\t%%nonzeros= %0.4f\tMatch.%%error= %0.4f\n",
+                        iter, f_t, sparse,
+                        100*sum(abs(Q_true[-seeds, -seeds] - D[-seeds, -seeds]))/(2*(n-length(seeds))), "\n" ))
           }
 
         }
@@ -179,9 +162,9 @@ bipartite_matching_icov <- function(A, B,
   index <- which.max(unlist(f_list_lambda))
   Q_best <- Q_list_lambda[[index]]
   f_best <- f_list_lambda[[index]]
-  Q_1 <- as.matrix(1 - t(Q_best) %*% A %*% Q_best)
+  Q_1 <- as.matrix(1 - Matrix::t(Q_best) %*% A %*% Q_best)
   diag(Q_1) <- 0
-  Theta_hat <- suppressWarnings(glasso(S, rho=0, zero = which(Q_1==1, arr.ind = T)))
+  Theta_hat <- suppressWarnings(glasso::glasso(S, rho=0, zero = which(Q_1==1, arr.ind = T)))
 
   return(list(Q = Q_best, Theta = Theta_hat$wi, f = f_best))
 }
@@ -195,23 +178,23 @@ bipartite_matching_fast <- function(A, B, Q_true = NULL,
   n = nrow(B)
   m = ncol(B)
   if(covariance) {
-    S = cov(t(B))
+    S = cov(Matrix::t(B))
   }else {
-    S = cor(t(B))
+    S = cor(Matrix::t(B))
   }
-  hg = huge(t(B), method = method)
+  hg = huge(Matrix::t(B), method = method)
   # penalty values
   Q_list_lambda = list()
   f_list_lambda = list()
   i = 1
   # baseline
   if(!is.null(Q_true)) {
-    Q_1 = as.matrix(1 -t(Q_true) %*% A %*% Q_true)
+    Q_1 = as.matrix(1 -Matrix::t(Q_true) %*% A %*% Q_true)
     diag(Q_1) = 0
-    Theta_hat = suppressWarnings(glasso(S, rho=0, zero = which(Q_1==1, arr.ind = T)))
+    Theta_hat = suppressWarnings(glasso::glasso(S, rho=0, zero = which(Q_1==1, arr.ind = T)))
     if(is.nan(max(Theta_hat$wi)))
-      Theta_hat = suppressWarnings(glasso(S, rho=1e-4, zero = which(Q_1==1, arr.ind = T)))
-    cat("---Baseline logdet:", log(det(Theta_hat$wi)) - sum(S*Theta_hat$wi), "\n")
+      Theta_hat = suppressWarnings(glasso::glasso(S, rho=1e-4, zero = which(Q_1==1, arr.ind = T)))
+    print(sprintf("---Baseline logdet: %.4f", log(det(Theta_hat$wi)) - sum(S*Theta_hat$wi)))
   }
   # screen
   nonzeros = sapply(hg$path, sum)
@@ -226,11 +209,11 @@ bipartite_matching_fast <- function(A, B, Q_true = NULL,
 
     # objective function to calculate convergence and fit
     Q = GM$P
-    Q_1 = as.matrix(1 - t(Q) %*% A %*% Q)
+    Q_1 = as.matrix(1 - Matrix::t(Q) %*% A %*% Q)
     diag(Q_1) = 0
-    Theta_hat = suppressWarnings(glasso(S, rho=0, zero = which(Q_1==1, arr.ind = T)))
+    Theta_hat = suppressWarnings(glasso::glasso(S, rho=0, zero = which(Q_1==1, arr.ind = T)))
     if(is.nan(max(Theta_hat$wi)))
-      Theta_hat = suppressWarnings(glasso(S, rho=1e-3, zero = which(Q_1==1, arr.ind = T)))
+      Theta_hat = suppressWarnings(glasso::glasso(S, rho=1e-3, zero = which(Q_1==1, arr.ind = T)))
     f_t = log(det(Theta_hat$wi)) - sum(S*Theta_hat$wi)
 
     # choose best solution
@@ -241,9 +224,9 @@ bipartite_matching_fast <- function(A, B, Q_true = NULL,
   index = which.max(unlist(f_list_lambda))
   Q_best = Q_list_lambda[[index]]
   f_best = f_list_lambda[[index]]
-  Q_1 = as.matrix(1 - t(Q_best) %*% A %*% Q_best)
+  Q_1 = as.matrix(1 - Matrix::t(Q_best) %*% A %*% Q_best)
   diag(Q_1) = 0
-  Theta_hat = suppressWarnings(glasso(S, rho=0, zero = which(Q_1==1, arr.ind = T)))
+  Theta_hat = suppressWarnings(glasso::glasso(S, rho=0, zero = which(Q_1==1, arr.ind = T)))
 
   return(list(Q = Q_best, Theta = Theta_hat$wi, f = f_best))
 }

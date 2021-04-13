@@ -12,8 +12,7 @@ bipartite_matching_icov(
   MAX_ITER = 30,
   verbose = FALSE,
   covariance = TRUE,
-  seeds = NULL,
-  similarity = FALSE
+  seeds = NULL
 )
 }
 \arguments{
@@ -35,8 +34,6 @@ with the unipartite graph.}
 \item{seeds}{If some vertices have known correspondence, a vector containing the indexes of these
 vertices can be passed through this parameter, and the corresponding rows of A and B are assumed to be aligned.
 The algorithm will then match the remaining vertices. The default is NULL if no seeds are available.}
-
-\item{similarity}{Whether to use a similarity (experimental parameter).}
 }
 \value{
 

@@ -3,3 +3,6 @@
 export(bipartite_matching_collapsed)
 export(bipartite_matching_icov)
 export(bipartite_matching_pseudolikelihood)
+export(edge_error)
+export(gm_error)
+export(graphical_model_errors)
