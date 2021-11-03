@@ -18,7 +18,7 @@
 #' @param seeds If some vertices have known correspondence, a vector containing the indexes of these
 #' vertices can be passed through this parameter, and the corresponding rows of A and B are assumed to be aligned.
 #' The algorithm will then match the remaining vertices. The default is NULL if no seeds are available.
-#' @param gamma Additional penalty for all variables. A positive small constant is needed when the sample size
+#' @param gamma Additional penalty for all variables. A positive small constant is needed when the sample size is small.
 #' @return
 #' @export
 bipartite_matching_pseudolikelihood <- function(A, B, Q_true = NULL,
@@ -26,7 +26,7 @@ bipartite_matching_pseudolikelihood <- function(A, B, Q_true = NULL,
                                                 lambdas = 10^(-2:0),
                                                 MAX_ITER = 20, verbose = FALSE,
                                                 seeds = NULL,
-                                                gamma = 0) {
+                                                gamma = 1/100) {
   # algorithm parameters
   TOL <- 1e-4
   l_factor <- 1
