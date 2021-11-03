@@ -1,5 +1,5 @@
 #only binomial implemented
-penalized_pseudolikelihood <- function(B, family = "binomial", lambda, W, gamma = 1/10) {
+penalized_pseudolikelihood <- function(B, family = "binomial", lambda, W, gamma = 1/100) {
   n = nrow(B)
   Theta_pseudo = Matrix(0, n, n)
   beta_pseudo = rep(0, n)
